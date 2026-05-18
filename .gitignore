@@ -1,0 +1,13 @@
+# env — never commit real keys
+.env.local
+.env*.local
+
+# Next.js
+.next/
+out/
+
+# deps
+node_modules/
+
+# OS
+.DS_Store

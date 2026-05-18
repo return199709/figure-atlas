@@ -1,0 +1,1078 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Figure Atlas — Personal Report</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<script src="https://js.stripe.com/v3/"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0D0B14;--bg2:#12101C;--bg3:#181525;--card:#1A1730;--card2:#201D35;
+  --border:#2A2647;--border2:#3D3868;
+  --purple:#7C6FFF;--purple-dim:#4B44A8;
+  --purple-glow:rgba(124,111,255,0.15);--purple-glow2:rgba(124,111,255,0.07);
+  --text:#F0EEF8;--text2:#A09CBF;--text3:#5E5A7A;--accent:#C4B5FD;
+  --red:#FF6B6B;--red-dim:rgba(255,107,107,0.12);
+  --serif:'Syne',sans-serif;--mono:'DM Mono',monospace;
+  --r:14px;--r-sm:8px;
+}
+::-webkit-scrollbar{width:4px}::-webkit-scrollbar-track{background:var(--bg)}::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px}
+body{background:var(--bg);font-family:var(--serif);color:var(--text);min-height:100vh;padding:48px 20px 80px;background-image:radial-gradient(ellipse 60% 40% at 50% -10%,rgba(124,111,255,0.13) 0%,transparent 70%),radial-gradient(ellipse 40% 30% at 85% 85%,rgba(90,70,200,0.07) 0%,transparent 60%)}
+.page-wrap{max-width:760px;margin:0 auto}
+.screen{display:none}.screen.active{display:block}
+@keyframes fadeUp{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+@keyframes slideRight{from{opacity:0;transform:translateX(-10px)}to{opacity:1;transform:translateX(0)}}
+@keyframes glowPulse{0%,100%{box-shadow:0 0 0 0 rgba(124,111,255,0)}50%{box-shadow:0 0 28px 0 rgba(124,111,255,0.22)}}
+@keyframes pulseDot{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.45;transform:scale(0.65)}}
+.tag{font-family:var(--mono);font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--purple);margin-bottom:16px;display:flex;align-items:center;gap:8px}
+.tag-dot{display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--purple);flex-shrink:0;animation:pulseDot 2s ease-in-out infinite;transition:box-shadow .15s}
+@keyframes dotFlash{0%{transform:scale(1)}30%{transform:scale(1.9);background:#C4B5FD;box-shadow:0 0 0 5px rgba(196,181,253,0.25)}100%{transform:scale(1);background:var(--purple);box-shadow:none}}
+.tag-dot.flash{animation:dotFlash .45s ease-out forwards}
+.card{background:var(--card);border:1px solid var(--border);border-radius:var(--r);position:relative;overflow:hidden}
+.card::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,var(--purple-dim),transparent)}
+.btn-primary{background:var(--purple);color:#0D0B14;border:none;padding:12px 28px;border-radius:var(--r-sm);font-family:var(--serif);font-size:14px;font-weight:700;cursor:pointer;transition:all .2s;letter-spacing:.02em}
+.btn-primary:hover{background:#9A8FFF;transform:translateY(-1px)}.btn-primary:disabled{opacity:.3;cursor:default;transform:none}
+.access-wrap{min-height:calc(100vh - 200px);display:flex;align-items:center;justify-content:center}
+.access-card{width:100%;max-width:580px;padding:52px;animation:fadeUp .65s cubic-bezier(.22,1,.36,1) forwards}
+.access-title{font-size:2.1rem;font-weight:800;line-height:1.2;color:var(--text);margin-bottom:10px;letter-spacing:-.03em}
+.access-title span{background:linear-gradient(135deg,#fff 20%,var(--accent));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.access-desc{font-family:var(--mono);font-size:12.5px;color:var(--text2);line-height:1.75;margin-bottom:28px}
+
+/* Payment section */
+.payment-section{margin-bottom:28px}
+.payment-divider{display:flex;align-items:center;gap:12px;margin:20px 0}
+.payment-divider-line{flex:1;height:1px;background:var(--border)}
+.payment-divider-text{font-family:var(--mono);font-size:10.5px;color:var(--text3);letter-spacing:.08em;white-space:nowrap}
+
+/* Stripe pay button */
+.stripe-pay-btn{
+  width:100%;height:52px;
+  background:linear-gradient(135deg,var(--purple) 0%,#9A8FFF 100%);
+  border:none;border-radius:var(--r-sm);
+  cursor:pointer;
+  display:flex;align-items:center;justify-content:space-between;
+  padding:0 20px;
+  transition:all .2s;
+}
+.stripe-pay-btn:hover{filter:brightness(1.1);transform:translateY(-1px)}
+.stripe-pay-btn:active{transform:translateY(0)}
+.stripe-pay-label{font-family:var(--mono);font-size:13px;color:#0D0B14;font-weight:600;letter-spacing:.04em}
+.stripe-pay-price{font-family:var(--mono);font-size:15px;color:#0D0B14;font-weight:700}
+.stripe-pay-sub{font-family:var(--mono);font-size:10px;color:rgba(13,11,20,0.6);display:block;margin-top:2px}
+
+/* Stripe form area */
+#stripe-form{margin-bottom:4px}
+.stripe-err{font-family:var(--mono);font-size:12px;color:var(--red);margin-top:8px;min-height:18px;line-height:1.4}
+
+/* Processing overlay */
+.pay-processing{
+  display:none;flex-direction:column;align-items:center;justify-content:center;
+  gap:16px;padding:40px 0;text-align:center;
+}
+.pay-processing.active{display:flex}
+.pay-spinner{
+  width:40px;height:40px;
+  border:2px solid var(--border);
+  border-top-color:var(--purple);
+  border-radius:50%;
+  animation:spin .8s linear infinite;
+}
+@keyframes spin{to{transform:rotate(360deg)}}
+.pay-processing-text{font-family:var(--mono);font-size:12.5px;color:var(--text2)}
+
+/* Key reveal */
+.key-reveal{
+  display:none;
+  background:var(--purple-glow2);
+  border:1px solid rgba(124,111,255,0.25);
+  border-radius:var(--r-sm);
+  padding:20px 22px;
+  margin-bottom:20px;
+  animation:fadeUp .4s cubic-bezier(.22,1,.36,1) forwards;
+}
+.key-reveal.active{display:block}
+.key-reveal-label{font-family:var(--mono);font-size:10px;color:var(--purple);letter-spacing:.12em;text-transform:uppercase;margin-bottom:8px}
+.key-reveal-code{font-family:var(--mono);font-size:1.3rem;font-weight:500;color:var(--accent);letter-spacing:.15em;margin-bottom:10px;word-break:break-all}
+.key-reveal-hint{font-family:var(--mono);font-size:11px;color:var(--text3);line-height:1.5}
+.key-reveal-copy{background:transparent;border:1px solid rgba(124,111,255,0.3);border-radius:4px;padding:4px 10px;font-family:var(--mono);font-size:10.5px;color:var(--purple);cursor:pointer;transition:all .15s;margin-left:8px}
+.key-reveal-copy:hover{background:var(--purple-glow)}
+
+/* Key input */
+.key-section-label{font-family:var(--mono);font-size:10.5px;color:var(--text3);letter-spacing:.1em;text-transform:uppercase;margin-bottom:10px}
+.key-input{width:100%;background:var(--bg2);border:1px solid var(--border);border-radius:var(--r-sm);padding:14px 18px;font-family:var(--mono);font-size:14.5px;color:var(--text);outline:none;transition:border-color .2s,box-shadow .2s;letter-spacing:.1em}
+.key-input:focus{border-color:var(--purple);box-shadow:0 0 0 3px var(--purple-glow)}.key-input::placeholder{color:var(--text3);letter-spacing:.04em}
+.key-err{font-family:var(--mono);font-size:12px;color:var(--red);margin:8px 0 0;display:none;align-items:center;gap:6px}
+.key-err::before{content:'!';width:16px;height:16px;background:var(--red-dim);border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:10px;flex-shrink:0}
+.key-input-row{display:flex;gap:8px;margin-bottom:6px}
+.key-input-row .key-input{flex:1}
+.btn-verify{background:var(--purple);color:#0D0B14;border:none;padding:0 22px;border-radius:var(--r-sm);font-family:var(--serif);font-size:13.5px;font-weight:700;cursor:pointer;transition:all .2s;white-space:nowrap;flex-shrink:0}
+.btn-verify:hover{background:#9A8FFF}.btn-verify:disabled{opacity:.4;cursor:default}
+
+/* Pref screen */
+.pref-card{max-width:600px;margin:0 auto;padding:52px;animation:fadeUp .65s cubic-bezier(.22,1,.36,1) forwards}
+.pref-title{font-size:1.85rem;font-weight:800;letter-spacing:-.03em;margin-bottom:8px}
+.pref-sub{font-family:var(--mono);font-size:12px;color:var(--text2);margin-bottom:32px;line-height:1.7}
+.pref-opts{display:flex;flex-direction:column;gap:8px}
+.pref-opt{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r-sm);padding:16px 20px;cursor:pointer;transition:all .15s;display:flex;align-items:center;gap:14px}
+.pref-opt::before{content:'';width:8px;height:8px;border-radius:50%;border:1.5px solid var(--text3);flex-shrink:0;transition:all .15s}
+.pref-opt:hover{border-color:var(--purple);background:var(--purple-glow2)}.pref-opt:hover::before{border-color:var(--purple)}
+.pref-opt.selected{border-color:var(--purple);background:var(--purple-glow2)}.pref-opt.selected::before{background:var(--purple);border-color:var(--purple)}
+.pref-opt-title{font-size:14px;font-weight:600;color:var(--text);margin-bottom:2px}.pref-opt-sub{font-family:var(--mono);font-size:11px;color:var(--text2)}
+.pref-next{margin-top:28px}
+
+/* Questions */
+.q-topbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
+.q-label{font-family:var(--mono);font-size:11px;color:var(--text3);letter-spacing:.08em}
+.progress-track{height:2px;background:var(--border);border-radius:1px;margin-bottom:22px;overflow:hidden}
+.progress-fill{height:100%;background:linear-gradient(90deg,var(--purple-dim),var(--purple));border-radius:1px;transition:width .5s cubic-bezier(.22,1,.36,1)}
+.q-section-pill{font-family:var(--mono);font-size:10.5px;color:var(--purple);background:var(--purple-glow);border:1px solid rgba(124,111,255,0.2);border-radius:99px;padding:4px 12px;margin-bottom:16px;display:inline-block;letter-spacing:.07em}
+.q-card{background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:36px;position:relative;overflow:hidden}
+.q-card::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,var(--purple-dim),transparent)}
+.q-text{font-size:1.3rem;font-weight:700;line-height:1.45;margin-bottom:28px;letter-spacing:-.02em;opacity:0;animation:fadeUp .4s cubic-bezier(.22,1,.36,1) .05s forwards}
+.q-choices{display:flex;flex-direction:column;gap:7px}
+.q-choice{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r-sm);padding:12px 18px;cursor:pointer;font-family:var(--mono);font-size:13px;line-height:1.55;transition:all .12s;display:flex;align-items:flex-start;gap:12px;opacity:0;animation:slideRight .4s cubic-bezier(.22,1,.36,1) forwards}
+.q-choice:nth-child(1){animation-delay:.1s}.q-choice:nth-child(2){animation-delay:.16s}.q-choice:nth-child(3){animation-delay:.22s}.q-choice:nth-child(4){animation-delay:.28s}
+.q-choice:hover{border-color:var(--purple);background:var(--purple-glow2);transform:translateX(4px)}
+.q-choice.selected{border-color:var(--purple);background:var(--purple-glow);color:var(--accent)}
+.q-choice.flash{border-color:var(--purple);background:var(--purple-glow)}
+.choice-letter{font-size:10.5px;font-weight:600;color:var(--purple);background:var(--purple-glow);border:1px solid rgba(124,111,255,0.25);border-radius:4px;padding:2px 6px;flex-shrink:0;margin-top:1px;letter-spacing:.06em}
+.q-back-btn{background:transparent;border:1px solid var(--border);padding:8px 16px;border-radius:var(--r-sm);cursor:pointer;font-family:var(--mono);font-size:12px;color:var(--text3);margin-top:16px;transition:all .12s}
+.q-back-btn:hover{border-color:var(--text2);color:var(--text2)}.q-hint{font-family:var(--mono);font-size:11px;color:var(--text3);margin-top:14px;letter-spacing:.04em}
+
+/* Loading */
+.loading-screen{min-height:calc(100vh - 200px);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:60px 20px}
+.loading-glyph{width:52px;height:52px;border-radius:12px;background:var(--purple-glow);border:1px solid rgba(124,111,255,0.3);display:flex;align-items:center;justify-content:center;margin-bottom:28px;animation:glowPulse 2.5s ease-in-out infinite;font-size:24px}
+.loading-title{font-size:1.45rem;font-weight:700;letter-spacing:-.02em;margin-bottom:8px;text-align:center}
+.loading-sub{font-family:var(--mono);font-size:12px;color:var(--text2);margin-bottom:40px;text-align:center}
+.loading-bar-track{height:2px;background:var(--border);border-radius:1px;width:280px;overflow:hidden;margin-bottom:14px}
+.loading-bar-fill{height:100%;background:linear-gradient(90deg,var(--purple-dim),var(--purple));border-radius:1px;width:0%;transition:width .4s ease}
+.loading-steps{font-family:var(--mono);font-size:11px;color:var(--text3);letter-spacing:.05em;min-height:20px}
+
+/* Results */
+.results-masthead{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:24px;padding-bottom:20px;border-bottom:1px solid var(--border);animation:fadeIn .5s ease forwards}
+.results-atlas-title{font-family:var(--mono);font-size:10.5px;letter-spacing:.2em;text-transform:uppercase;color:var(--purple);margin-bottom:3px}
+.results-atlas-sub{font-family:var(--mono);font-size:10px;color:var(--text3);letter-spacing:.08em}
+.results-date{font-size:1.35rem;font-weight:800;color:var(--text);letter-spacing:-.03em}
+.results-date-sub{font-family:var(--mono);font-size:10px;color:var(--text3);text-align:right;margin-top:2px}
+.hero-card{background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:36px;margin-bottom:14px;position:relative;overflow:hidden;opacity:0;animation:fadeUp .55s .05s cubic-bezier(.22,1,.36,1) forwards}
+.hero-card::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,var(--purple),transparent)}
+.hero-card::after{content:'';position:absolute;top:-80px;right:-80px;width:220px;height:220px;border-radius:50%;background:radial-gradient(circle,rgba(124,111,255,0.07) 0%,transparent 70%);pointer-events:none}
+.hero-eyebrow{font-family:var(--mono);font-size:10.5px;color:var(--text3);letter-spacing:.1em;margin-bottom:14px}
+.hero-body{display:grid;grid-template-columns:1fr 240px;gap:24px}
+.hero-name-block{display:inline-block;margin-bottom:10px}
+.hero-name-label{font-family:var(--mono);font-size:9.5px;color:var(--purple);letter-spacing:.14em;text-transform:uppercase;margin-bottom:5px}
+.hero-name{font-size:2.5rem;font-weight:800;line-height:1.1;letter-spacing:-.04em;background:linear-gradient(135deg,#fff 30%,var(--accent));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.hero-era{font-family:var(--mono);font-size:11px;color:var(--text3);margin-top:6px;margin-bottom:18px;letter-spacing:.05em}
+.hero-quote{font-size:1rem;font-weight:500;line-height:1.65;color:var(--text2);margin-bottom:18px;font-style:italic;border-left:2px solid var(--purple-dim);padding-left:14px}
+.hero-tags{display:flex;flex-wrap:wrap;gap:6px}
+.hero-tag{font-family:var(--mono);font-size:10.5px;border:1px solid var(--border2);border-radius:4px;padding:3px 9px;color:var(--text2);letter-spacing:.04em}
+.kpi-col{display:flex;flex-direction:column;gap:7px}
+.kpi-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r-sm);padding:11px 13px}
+.kpi-label{font-family:var(--mono);font-size:9.5px;color:var(--text3);margin-bottom:3px;letter-spacing:.1em;text-transform:uppercase}
+.kpi-value{font-size:14.5px;font-weight:700;color:var(--text);line-height:1.2;letter-spacing:-.01em}
+.kpi-desc{font-family:var(--mono);font-size:10px;color:var(--text3);margin-top:3px;line-height:1.4}
+.section-divider{border:none;border-top:1px solid var(--border);margin:18px 0}
+.section-block{margin-bottom:14px;opacity:0;animation:fadeUp .5s cubic-bezier(.22,1,.36,1) forwards}
+.section-block:nth-child(1){animation-delay:.08s}.section-block:nth-child(2){animation-delay:.15s}.section-block:nth-child(3){animation-delay:.22s}.section-block:nth-child(4){animation-delay:.29s}.section-block:nth-child(5){animation-delay:.36s}.section-block:nth-child(6){animation-delay:.43s}
+.section-header{display:flex;align-items:center;gap:10px;margin-bottom:9px}
+.section-num{font-family:var(--mono);font-size:9.5px;color:var(--purple);background:var(--purple-glow);border:1px solid rgba(124,111,255,0.2);border-radius:4px;padding:2px 7px;flex-shrink:0;letter-spacing:.06em}
+.section-title{font-size:1.02rem;font-weight:700;color:var(--text);letter-spacing:-.01em}
+.section-body{background:var(--card2);border:1px solid var(--border);border-radius:var(--r-sm);padding:18px 20px}
+.section-text{font-family:var(--mono);font-size:12.5px;line-height:1.85;color:var(--text2)}.section-text p+p{margin-top:12px}
+.radar-wrap{position:relative;width:100%;height:300px;margin:8px 0 16px}
+.dim-cards-grid{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-top:4px}
+.dim-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r-sm);padding:11px 13px}
+.dim-card-top{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:2px}
+.dim-card-name{font-size:13px;font-weight:600;color:var(--text)}.dim-card-pct{font-family:var(--mono);font-size:12px;font-weight:500;color:var(--purple)}
+.dim-card-desc{font-family:var(--mono);font-size:10.5px;color:var(--text3);line-height:1.45;margin-bottom:4px}
+.dim-card-flag{font-family:var(--mono);font-size:10.5px;color:var(--red);display:flex;align-items:center;gap:4px}.dim-card-flag::before{content:'▲';font-size:7px}
+.day-cards{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;margin:10px 0}
+.day-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r-sm);padding:13px}
+.day-label{font-family:var(--mono);font-size:9.5px;letter-spacing:.13em;text-transform:uppercase;color:var(--purple);margin-bottom:7px;font-weight:500}
+.day-text{font-family:var(--mono);font-size:11.5px;line-height:1.65;color:var(--text2)}
+.goal-box{background:var(--purple-glow2);border:1px solid rgba(124,111,255,0.18);border-radius:var(--r-sm);padding:13px 16px;font-family:var(--mono);font-size:12px;color:var(--accent);line-height:1.65;margin-top:9px}
+.results-footer{margin-top:36px;padding-top:22px;border-top:1px solid var(--border)}
+.footer-hint{font-family:var(--mono);font-size:11px;color:var(--text3);margin-bottom:14px;letter-spacing:.03em}
+.footer-btns{display:flex;gap:8px;flex-wrap:wrap}
+.btn-copy{background:var(--purple);color:#0D0B14;border:none;padding:10px 22px;border-radius:var(--r-sm);font-family:var(--serif);font-size:13px;font-weight:700;cursor:pointer;transition:all .2s}
+.btn-copy:hover{background:#9A8FFF;transform:translateY(-1px)}
+.btn-retake{background:transparent;border:1px solid var(--border2);padding:10px 22px;border-radius:var(--r-sm);font-family:var(--serif);font-size:13px;color:var(--text2);cursor:pointer;transition:all .15s}
+.btn-retake:hover{border-color:var(--text2);color:var(--text)}
+.btn-contact{background:transparent;border:1px solid rgba(255,107,107,0.3);padding:10px 22px;border-radius:var(--r-sm);font-family:var(--serif);font-size:13px;color:var(--red);cursor:pointer;transition:all .15s}
+.btn-contact:hover{background:var(--red-dim)}.legal{font-family:var(--mono);font-size:10.5px;color:var(--text3);margin-top:12px;letter-spacing:.02em}
+@media(max-width:580px){.hero-body{grid-template-columns:1fr}.kpi-col{flex-direction:row;flex-wrap:wrap}.kpi-card{flex:1;min-width:130px}.day-cards{grid-template-columns:1fr}.dim-cards-grid{grid-template-columns:1fr}.access-card,.pref-card{padding:32px 24px}.hero-name{font-size:2rem}.q-card{padding:24px}}
+
+/* ── Click & interaction animations ── */
+.click-ripple{
+  position:fixed;pointer-events:none;z-index:9999;border-radius:50%;
+  background:radial-gradient(circle,rgba(196,181,253,0.38) 0%,rgba(124,111,255,0.14) 45%,transparent 70%);
+  transform:scale(0);opacity:1;
+  animation:clickRipple .55s cubic-bezier(.22,1,.36,1) forwards;
+}
+@keyframes clickRipple{to{transform:scale(1);opacity:0}}
+
+/* Button active glow */
+.btn-primary:active{box-shadow:0 0 0 3px rgba(124,111,255,0.3),0 0 22px rgba(124,111,255,0.28)!important;transform:scale(0.97) translateY(0)!important}
+.stripe-pay-btn:active{filter:brightness(1.18)!important;box-shadow:0 0 20px rgba(124,111,255,0.3)!important}
+.btn-verify:active{box-shadow:0 0 16px rgba(124,111,255,0.3)!important}
+.btn-copy:active,.btn-retake:active,.btn-contact:active{transform:scale(0.97)!important}
+
+/* Choice letter brightens on selection */
+.q-choice.selected .choice-letter{
+  background:var(--purple);color:#0D0B14;
+  box-shadow:0 0 10px rgba(124,111,255,0.55);
+  transition:all .18s;
+}
+/* Choice bloom on click */
+@keyframes choiceBloom{
+  0%{box-shadow:inset 0 0 0 1px rgba(124,111,255,0.8),0 0 0 0 rgba(124,111,255,0.4)}
+  100%{box-shadow:inset 0 0 0 1px rgba(124,111,255,0.6),0 0 0 16px rgba(124,111,255,0)}
+}
+.q-choice.flash{animation:choiceBloom .5s ease-out forwards!important}
+
+/* Pref option bloom on select */
+@keyframes prefBloom{
+  0%{box-shadow:0 0 0 0 rgba(124,111,255,0.45)}
+  100%{box-shadow:0 0 0 12px rgba(124,111,255,0)}
+}
+.pref-opt.selected{animation:prefBloom .45s ease-out forwards}
+
+/* Card mouse-follow glow */
+.card{--gx:50%;--gy:50%}
+.card .card-glow{
+  position:absolute;inset:0;border-radius:inherit;pointer-events:none;
+  background:radial-gradient(280px circle at var(--gx) var(--gy),rgba(124,111,255,0.07),transparent 70%);
+  opacity:0;transition:opacity .3s;
+}
+.card:hover .card-glow{opacity:1}
+
+/* KPI / section num / choice-letter idle shimmer on hover */
+.kpi-card:hover{border-color:var(--border2);transition:border-color .2s}
+.section-num{transition:background .15s,box-shadow .15s}
+.section-block:hover .section-num{background:rgba(124,111,255,0.25);box-shadow:0 0 8px rgba(124,111,255,0.2)}
+</style>
+</head>
+<body>
+<div class="page-wrap">
+
+<!-- ══ SCREEN 1: ACCESS KEY ══ -->
+<div class="screen active" id="screen-key">
+  <div class="access-wrap"><div class="access-card card">
+    <div class="tag"><span class="tag-dot"></span>Figure Atlas · Access</div>
+    <h1 class="access-title">Discover your <span>historical archetype</span></h1>
+    <p class="access-desc">24 scenario questions · matched to 100 historical figures · shareable personal report — one-time access, $1.99 USD.</p>
+
+    <!-- PAYMENT SECTION -->
+    <div class="payment-section" id="payment-section">
+
+      <!-- Pay button -->
+      <button class="stripe-pay-btn" id="stripe-pay-btn" onclick="initStripePayment()">
+        <div>
+          <span class="stripe-pay-label">Pay with Apple Pay · Card</span>
+          <span class="stripe-pay-sub">Secured by Stripe</span>
+        </div>
+        <span class="stripe-pay-price">$1.99</span>
+      </button>
+
+      <!-- Processing state -->
+      <div class="pay-processing" id="pay-processing">
+        <div class="pay-spinner"></div>
+        <p class="pay-processing-text" id="pay-processing-text">Initialising payment…</p>
+      </div>
+
+      <!-- Stripe payment element (mounts here after init) -->
+      <div id="stripe-form" style="display:none;margin-top:16px">
+        <div id="stripe-payment-element" style="margin-bottom:12px"></div>
+        <button class="btn-primary" id="stripe-submit-btn" onclick="submitStripePayment()" style="width:100%">
+          Complete payment — $1.99
+        </button>
+        <p class="stripe-err" id="stripe-err"></p>
+      </div>
+
+      <!-- Key reveal after successful payment -->
+      <div class="key-reveal" id="key-reveal">
+        <div class="key-reveal-label">Your access key — save this</div>
+        <div class="key-reveal-code" id="key-reveal-code">FA-XXXX-XXXX</div>
+        <div class="key-reveal-hint">
+          Key auto-filled below. Valid for one session.
+          <button class="key-reveal-copy" onclick="copyKey()">Copy</button>
+        </div>
+      </div>
+
+      <!-- Divider -->
+      <div class="payment-divider" id="pay-divider">
+        <div class="payment-divider-line"></div>
+        <span class="payment-divider-text">or enter existing key</span>
+        <div class="payment-divider-line"></div>
+      </div>
+    </div>
+
+    <!-- KEY INPUT -->
+    <div id="key-entry-section">
+      <div class="key-section-label">Access key</div>
+      <div class="key-input-row">
+        <input class="key-input" id="key-input" type="text" placeholder="FA-XXXX-XXXX" maxlength="12" autocomplete="off" spellcheck="false" />
+        <button class="btn-verify" id="key-verify-btn" onclick="verifyKey()">Enter →</button>
+      </div>
+      <p class="key-err" id="key-err">Invalid or already-used key. Please try again.</p>
+    </div>
+  </div></div>
+</div>
+
+<!-- ══ SCREEN 2: PREFERENCE ══ -->
+<div class="screen" id="screen-pref">
+  <div class="pref-card card">
+    <div class="tag"><span class="tag-dot"></span>Step 1 · Profile Preference</div>
+    <h2 class="pref-title">Choose your figure orientation</h2>
+    <p class="pref-sub">This only affects which historical figures are prioritized in your results. It does not affect questions or scoring.</p>
+    <div class="pref-opts">
+      <div class="pref-opt" onclick="selectPref('female',this)">
+        <div><div class="pref-opt-title">Female figures preferred</div><div class="pref-opt-sub">Prioritize matching with female historical figures</div></div>
+      </div>
+      <div class="pref-opt" onclick="selectPref('male',this)">
+        <div><div class="pref-opt-title">Male figures preferred</div><div class="pref-opt-sub">Prioritize matching with male historical figures</div></div>
+      </div>
+      <div class="pref-opt" onclick="selectPref('any',this)">
+        <div><div class="pref-opt-title">No preference (I don't mind)</div><div class="pref-opt-sub">No gender restriction, matched randomly</div></div>
+      </div>
+    </div>
+    <div class="pref-next">
+      <button class="btn-primary" id="pref-btn" disabled onclick="startQuestions()">Continue →</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ SCREEN 3: QUESTIONS ══ -->
+<div class="screen" id="screen-q">
+  <div class="q-topbar">
+    <span class="q-label">Progress</span>
+    <span class="q-label" id="q-count-label">1 / 24</span>
+  </div>
+  <div class="progress-track"><div class="progress-fill" id="q-progress"></div></div>
+  <div class="q-section-pill" id="q-section-label">Scenario · Question 1 of 24</div>
+  <div class="q-card">
+    <p class="q-text" id="q-text"></p>
+    <div class="q-choices" id="q-choices"></div>
+    <button class="q-back-btn" id="q-back" onclick="qBack()">← Previous</button>
+  </div>
+  <p class="q-hint">Tip: click an answer to automatically advance to the next question</p>
+</div>
+
+<!-- ══ SCREEN 4: LOADING ══ -->
+<div class="screen" id="screen-loading">
+  <div class="loading-screen">
+    <div class="loading-glyph">◈</div>
+    <h2 class="loading-title">Generating your personal atlas…</h2>
+    <p class="loading-sub">Matching your answers against 100 historical figures</p>
+    <div class="loading-bar-track"><div class="loading-bar-fill" id="loading-bar"></div></div>
+    <p class="loading-steps" id="loading-step">Analysing response patterns…</p>
+  </div>
+</div>
+
+<!-- ══ SCREEN 5: RESULTS ══ -->
+<div class="screen" id="screen-results">
+  <div class="results-masthead">
+    <div class="results-masthead-left">
+      <div class="results-atlas-title">Figure Atlas</div>
+      <div class="results-atlas-sub" id="res-report-id">PERSONA REPORT #00-00</div>
+    </div>
+    <div class="results-date-block">
+      <div class="results-date" id="res-date"></div>
+      <div class="results-date-sub">Assessment Report V1.0</div>
+    </div>
+  </div>
+
+  <div class="hero-card">
+    <div class="hero-eyebrow">Your historical figure archetype is</div>
+    <div class="hero-body">
+      <div class="hero-left">
+        <div class="hero-name-block">
+          <div class="hero-name-label">Your archetype</div>
+          <div class="hero-name" id="res-name">—</div>
+        </div>
+        <div class="hero-era" id="res-era"></div>
+        <blockquote class="hero-quote" id="res-quote" style="margin-top:16px"></blockquote>
+        <div class="hero-tags" id="res-tags"></div>
+      </div>
+      <div class="kpi-col" id="res-kpis"></div>
+    </div>
+  </div>
+
+  <div id="res-sections"></div>
+
+  <div class="results-footer">
+    <p class="footer-hint">Save your results by copying the current link</p>
+    <div class="footer-btns">
+      <button class="btn-copy" onclick="copyLink()">Copy link</button>
+      <button class="btn-retake" onclick="retake()">Retake</button>
+      <button class="btn-contact">Contact us</button>
+    </div>
+    <p class="legal">Final interpretation rights belong to the author and authorized partners.</p>
+  </div>
+</div>
+
+</div><!-- /page-wrap -->
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script>
+// ══════════════════════════════════════════
+// DATA
+// ══════════════════════════════════════════
+
+const FIGURES = [
+  {name:'Julius Caesar',era:'Roman Republic · General & Statesman',g:'m',tags:['Ambition','Decisiveness','Charisma'],quote:'"I came, I saw, I conquered."',dims:{A:72,B:65,C:88,D:60,E:98,F:70,G:75}},
+  {name:'Napoleon Bonaparte',era:'French Empire · Military Commander',g:'m',tags:['Strategy','Ambition','Boldness'],quote:'"Impossible is a word found only in the dictionary of fools."',dims:{A:78,B:55,C:85,D:62,E:99,F:75,G:68}},
+  {name:'Leonardo da Vinci',era:'Italian Renaissance · Polymath',g:'m',tags:['Curiosity','Creativity','Vision'],quote:'"Learning never exhausts the mind."',dims:{A:99,B:60,C:70,D:80,E:85,F:98,G:65}},
+  {name:'Albert Einstein',era:'Modern Physics · Scientist',g:'m',tags:['Curiosity','Depth','Intuition'],quote:'"Imagination is more important than knowledge."',dims:{A:99,B:55,C:72,D:78,E:75,F:96,G:70}},
+  {name:'Socrates',era:'Ancient Greece · Philosopher',g:'m',tags:['Depth','Questioning','Integrity'],quote:'"The unexamined life is not worth living."',dims:{A:90,B:75,C:80,D:85,E:50,F:99,G:72}},
+  {name:'Marcus Aurelius',era:'Roman Empire · Emperor & Stoic',g:'m',tags:['Resilience','Wisdom','Duty'],quote:'"You have power over your mind, not outside events."',dims:{A:82,B:70,C:94,D:90,E:72,F:92,G:88}},
+  {name:'Aristotle',era:'Ancient Greece · Philosopher & Scientist',g:'m',tags:['Logic','Depth','Balance'],quote:'"We are what we repeatedly do."',dims:{A:95,B:65,C:78,D:80,E:70,F:97,G:75}},
+  {name:'Plato',era:'Ancient Greece · Philosopher',g:'m',tags:['Vision','Depth','Idealism'],quote:'"At the touch of love, everyone becomes a poet."',dims:{A:88,B:68,C:72,D:82,E:68,F:98,G:70}},
+  {name:'Isaac Newton',era:'Scientific Revolution · Physicist',g:'m',tags:['Precision','Focus','Discovery'],quote:'"If I have seen further, it is by standing on the shoulders of giants."',dims:{A:96,B:45,C:80,D:85,E:80,F:95,G:60}},
+  {name:'Charles Darwin',era:'Victorian Era · Naturalist',g:'m',tags:['Curiosity','Patience','Precision'],quote:'"It is not the strongest that survives, but the most adaptable."',dims:{A:97,B:60,C:82,D:88,E:78,F:92,G:72}},
+  {name:'Galileo Galilei',era:'Scientific Revolution · Astronomer',g:'m',tags:['Courage','Curiosity','Truth'],quote:'"And yet it moves."',dims:{A:94,B:55,C:85,D:80,E:75,F:90,G:65}},
+  {name:'Nikola Tesla',era:'Industrial Age · Inventor',g:'m',tags:['Vision','Intensity','Innovation'],quote:'"The present is theirs; the future is mine."',dims:{A:97,B:42,C:75,D:70,E:88,F:95,G:48}},
+  {name:'Abraham Lincoln',era:'19th-century America · President',g:'m',tags:['Empathy','Resilience','Integrity'],quote:'"Give me six hours to chop down a tree and I will spend four sharpening the axe."',dims:{A:75,B:82,C:95,D:80,E:82,F:85,G:78}},
+  {name:'Winston Churchill',era:'20th Century · British PM',g:'m',tags:['Resilience','Wit','Leadership'],quote:'"Success is not final; failure is not fatal."',dims:{A:72,B:70,C:96,D:68,E:90,F:80,G:75}},
+  {name:'Nelson Mandela',era:'Modern Africa · Freedom Leader',g:'m',tags:['Resilience','Compassion','Justice'],quote:'"It always seems impossible until it is done."',dims:{A:70,B:88,C:99,D:82,E:82,F:82,G:85}},
+  {name:'Mahatma Gandhi',era:'Colonial India · Independence Leader',g:'m',tags:['Nonviolence','Conviction','Simplicity'],quote:'"Be the change you wish to see in the world."',dims:{A:68,B:90,C:95,D:88,E:75,F:88,G:90}},
+  {name:'Martin Luther King Jr.',era:'Civil Rights Era · Leader',g:'m',tags:['Connection','Vision','Courage'],quote:'"Darkness cannot drive out darkness; only light can do that."',dims:{A:72,B:95,C:90,D:82,E:85,F:88,G:80}},
+  {name:'Shakespeare',era:'Elizabethan England · Playwright',g:'m',tags:['Depth','Empathy','Language'],quote:'"We know what we are, but not what we may be."',dims:{A:85,B:88,C:72,D:80,E:70,F:98,G:68}},
+  {name:'Michelangelo',era:'Italian Renaissance · Artist',g:'m',tags:['Perfectionism','Depth','Intensity'],quote:'"I am still learning."',dims:{A:88,B:50,C:80,D:85,E:85,F:97,G:55}},
+  {name:'Beethoven',era:'Classical/Romantic Era · Composer',g:'m',tags:['Intensity','Depth','Persistence'],quote:'"Music is the mediator between the spiritual and the sensual life."',dims:{A:85,B:55,C:88,D:75,E:88,F:98,G:48}},
+  {name:'Mozart',era:'Classical Era · Composer',g:'m',tags:['Spontaneity','Genius','Playfulness'],quote:'"Neither a lofty degree of intelligence nor imagination is necessary to be creative."',dims:{A:90,B:72,C:65,D:70,E:80,F:96,G:78}},
+  {name:'Benjamin Franklin',era:'American Founding Era · Polymath',g:'m',tags:['Pragmatism','Wit','Curiosity'],quote:'"An investment in knowledge pays the best interest."',dims:{A:95,B:80,C:82,D:75,E:85,F:85,G:85}},
+  {name:'Thomas Jefferson',era:'American Founding Era · President',g:'m',tags:['Intellect','Vision','Independence'],quote:'"I cannot live without books."',dims:{A:90,B:65,C:75,D:78,E:82,F:90,G:72}},
+  {name:'Alexander the Great',era:'Ancient Macedonia · Conqueror',g:'m',tags:['Boldness','Vision','Speed'],quote:'"There is nothing impossible to him who will try."',dims:{A:75,B:60,C:88,D:62,E:99,F:72,G:68}},
+  {name:'Genghis Khan',era:'Mongolian Empire · Founder',g:'m',tags:['Strategy','Resilience','Decisiveness'],quote:'"An action committed in anger is an action doomed to failure."',dims:{A:70,B:55,C:92,D:60,E:98,F:68,G:65}},
+  {name:'Frederick the Great',era:'18th-century Prussia · King',g:'m',tags:['Strategy','Discipline','Cultivation'],quote:'"A crown is merely a hat that lets the rain in."',dims:{A:85,B:55,C:88,D:75,E:90,F:88,G:70}},
+  {name:'Voltaire',era:'French Enlightenment · Writer',g:'m',tags:['Wit','Courage','Justice'],quote:'"Judge a man by his questions rather than by his answers."',dims:{A:92,B:70,C:80,D:75,E:72,F:95,G:75}},
+  {name:'Jean-Jacques Rousseau',era:'French Enlightenment · Philosopher',g:'m',tags:['Depth','Feeling','Idealism'],quote:'"Man is born free, and everywhere he is in chains."',dims:{A:85,B:75,C:65,D:80,E:65,F:92,G:60}},
+  {name:'Immanuel Kant',era:'German Enlightenment · Philosopher',g:'m',tags:['Discipline','Logic','Depth'],quote:'"Two things fill me with wonder: the starry sky above, and the moral law within."',dims:{A:88,B:50,C:82,D:88,E:68,F:99,G:65}},
+  {name:'Nietzsche',era:'19th-century Germany · Philosopher',g:'m',tags:['Intensity','Vision','Uncompromising'],quote:'"He who has a why to live can bear almost any how."',dims:{A:88,B:45,C:80,D:78,E:82,F:99,G:50}},
+  {name:'Sigmund Freud',era:'Early 20th Century · Psychologist',g:'m',tags:['Depth','Curiosity','Boldness'],quote:'"The interpretation of dreams is the royal road to knowledge of the unconscious."',dims:{A:90,B:65,C:75,D:80,E:82,F:98,G:55}},
+  {name:'Carl Jung',era:'Early 20th Century · Psychologist',g:'m',tags:['Depth','Intuition','Shadow'],quote:'"Who looks outside, dreams; who looks inside, awakes."',dims:{A:92,B:68,C:78,D:88,E:70,F:99,G:65}},
+  {name:'Descartes',era:'Scientific Revolution · Philosopher',g:'m',tags:['Doubt','Logic','Precision'],quote:'"I think, therefore I am."',dims:{A:90,B:48,C:80,D:85,E:75,F:97,G:65}},
+  {name:'Adam Smith',era:'Scottish Enlightenment · Economist',g:'m',tags:['Observation','Pragmatism','Clarity'],quote:'"The real tragedy of the poor is the poverty of their aspirations."',dims:{A:88,B:65,C:78,D:80,E:72,F:88,G:75}},
+  {name:'Karl Marx',era:'19th-century Europe · Philosopher',g:'m',tags:['Justice','Depth','Conviction'],quote:'"Workers of the world, unite!"',dims:{A:85,B:75,C:80,D:70,E:85,F:95,G:52}},
+  {name:'Copernicus',era:'Renaissance · Astronomer',g:'m',tags:['Courage','Precision','Patience'],quote:'"To know that we know what we know, and to know that we do not know what we do not know, that is true knowledge."',dims:{A:95,B:52,C:85,D:88,E:75,F:92,G:68}},
+  {name:'Francis Bacon',era:'English Renaissance · Philosopher',g:'m',tags:['Empiricism','Ambition','Clarity'],quote:'"Knowledge is power."',dims:{A:92,B:58,C:78,D:80,E:82,F:88,G:70}},
+  {name:'William Harvey',era:'17th-century England · Physician',g:'m',tags:['Patience','Precision','Persistence'],quote:'"All we know is still infinitely less than all that remains unknown."',dims:{A:96,B:55,C:82,D:85,E:75,F:93,G:68}},
+  {name:'Hemingway',era:'20th-Century America · Writer',g:'m',tags:['Directness','Courage','Presence'],quote:'"The best way to find out if you can trust somebody is to trust them."',dims:{A:75,B:72,C:82,D:88,E:75,F:85,G:80}},
+  {name:'Dostoevsky',era:'19th-century Russia · Writer',g:'m',tags:['Depth','Empathy','Suffering'],quote:'"Pain and suffering are always inevitable for a large intelligence and a deep heart."',dims:{A:82,B:82,C:70,D:78,E:65,F:99,G:50}},
+  {name:'Tolstoy',era:'19th-century Russia · Writer',g:'m',tags:['Depth','Morality','Observation'],quote:'"Everyone thinks of changing the world, but no one thinks of changing himself."',dims:{A:85,B:80,C:78,D:85,E:68,F:98,G:65}},
+  {name:'Confucius',era:'Ancient China · Philosopher',g:'m',tags:['Virtue','Order','Relationships'],quote:'"It does not matter how slowly you go as long as you do not stop."',dims:{A:80,B:88,C:85,D:88,E:72,F:90,G:85}},
+  {name:'Sun Tzu',era:'Ancient China · Strategist',g:'m',tags:['Strategy','Adaptability','Precision'],quote:'"In the midst of chaos, there is also opportunity."',dims:{A:88,B:60,C:90,D:85,E:90,F:95,G:75}},
+  {name:'Marco Polo',era:'Medieval Europe · Explorer',g:'m',tags:['Curiosity','Adaptability','Openness'],quote:'"I have not told half of what I saw."',dims:{A:95,B:75,C:85,D:90,E:82,F:75,G:88}},
+  {name:'Rembrandt',era:'Dutch Golden Age · Painter',g:'m',tags:['Depth','Observation','Authenticity'],quote:'"Choose only one master — nature."',dims:{A:85,B:65,C:72,D:88,E:72,F:97,G:65}},
+  {name:'Bach',era:'Baroque Era · Composer',g:'m',tags:['Precision','Depth','Devotion'],quote:'"Music is an agreeable harmony for the honour of God."',dims:{A:85,B:60,C:80,D:82,E:75,F:98,G:70}},
+  {name:'Raphael',era:'Italian Renaissance · Painter',g:'m',tags:['Harmony','Grace','Craftsmanship'],quote:'"A good painter is to paint two main things: people and their soul."',dims:{A:85,B:72,C:75,D:82,E:75,F:90,G:78}},
+  {name:'Kepler',era:'Scientific Revolution · Astronomer',g:'m',tags:['Precision','Persistence','Wonder'],quote:'"Nature uses as little as possible of anything."',dims:{A:95,B:52,C:85,D:85,E:78,F:92,G:65}},
+  {name:'Hume',era:'Scottish Enlightenment · Philosopher',g:'m',tags:['Skepticism','Clarity','Ease'],quote:'"The life of man is of no greater importance to the universe than that of an oyster."',dims:{A:90,B:65,C:78,D:82,E:62,F:92,G:85}},
+  {name:'Locke',era:'English Enlightenment · Philosopher',g:'m',tags:['Reason','Tolerance','Liberty'],quote:'"The end of law is not to abolish or restrain, but to preserve and enlarge freedom."',dims:{A:88,B:70,C:80,D:80,E:72,F:88,G:78}},
+  {name:'Thomas Paine',era:'American Revolution · Writer',g:'m',tags:['Courage','Justice','Clarity'],quote:'"These are the times that try men\'s souls."',dims:{A:80,B:78,C:85,D:72,E:80,F:85,G:68}},
+  {name:'Machiavelli',era:'Renaissance Italy · Political Theorist',g:'m',tags:['Strategy','Realism','Analysis'],quote:'"The ends justify the means."',dims:{A:85,B:55,C:82,D:75,E:90,F:92,G:68}},
+  {name:'Erasmus',era:'Northern Renaissance · Humanist',g:'m',tags:['Wit','Tolerance','Learning'],quote:'"Give light, and the darkness will disappear of itself."',dims:{A:90,B:75,C:75,D:80,E:68,F:90,G:80}},
+  {name:'Pythagoras',era:'Ancient Greece · Mathematician',g:'m',tags:['Order','Precision','Mysticism'],quote:'"Do not say a little in many words but a great deal in a few."',dims:{A:92,B:58,C:80,D:85,E:75,F:95,G:70}},
+  {name:'Herodotus',era:'Ancient Greece · Historian',g:'m',tags:['Curiosity','Storytelling','Observation'],quote:'"In peace, sons bury their fathers. In war, fathers bury their sons."',dims:{A:95,B:75,C:78,D:85,E:65,F:85,G:80}},
+  {name:'Archimedes',era:'Ancient Greece · Mathematician',g:'m',tags:['Curiosity','Logic','Breakthrough'],quote:'"Give me a lever long enough and I shall move the world."',dims:{A:98,B:50,C:82,D:85,E:80,F:96,G:65}},
+  // Female
+  {name:'Cleopatra VII',era:'Ptolemaic Egypt · Queen',g:'f',tags:['Intellect','Strategy','Presence'],quote:'"I will not be triumphed over."',dims:{A:85,B:80,C:90,D:80,E:95,F:88,G:80}},
+  {name:'Joan of Arc',era:'Medieval France · Military Leader',g:'f',tags:['Conviction','Courage','Simplicity'],quote:'"I am not afraid; I was born to do this."',dims:{A:65,B:75,C:98,D:82,E:90,F:72,G:72}},
+  {name:'Marie Curie',era:'Turn-of-Century Science · Physicist',g:'f',tags:['Precision','Persistence','Discovery'],quote:'"Nothing in life is to be feared, only to be understood."',dims:{A:98,B:58,C:92,D:85,E:90,F:95,G:65}},
+  {name:'Simone de Beauvoir',era:'20th-Century France · Philosopher',g:'f',tags:['Depth','Independence','Courage'],quote:'"One is not born, but rather becomes, a woman."',dims:{A:88,B:72,C:82,D:80,E:78,F:97,G:65}},
+  {name:'Ada Lovelace',era:'Victorian England · Mathematician',g:'f',tags:['Vision','Logic','Imagination'],quote:'"The more I study, the more insatiable do I feel my genius to be."',dims:{A:97,B:55,C:78,D:80,E:88,F:96,G:60}},
+  {name:'Harriet Tubman',era:'19th-century America · Freedom Fighter',g:'f',tags:['Courage','Resilience','Service'],quote:'"I never ran my train off the track and I never lost a passenger."',dims:{A:68,B:85,C:99,D:82,E:85,F:75,G:80}},
+  {name:'Rosa Parks',era:'Civil Rights America · Activist',g:'f',tags:['Quiet Resolve','Dignity','Courage'],quote:'"You must never be fearful about what you are doing when it is right."',dims:{A:65,B:80,C:97,D:88,E:72,F:78,G:88}},
+  {name:'Virginia Woolf',era:'Modernist England · Writer',g:'f',tags:['Depth','Sensitivity','Vision'],quote:'"You cannot find peace by avoiding life."',dims:{A:88,B:70,C:68,D:85,E:72,F:99,G:55}},
+  {name:'George Eliot',era:'Victorian England · Writer',g:'f',tags:['Empathy','Depth','Realism'],quote:'"It is never too late to be what you might have been."',dims:{A:85,B:85,C:78,D:82,E:72,F:96,G:70}},
+  {name:'Florence Nightingale',era:'Victorian England · Nurse & Reformer',g:'f',tags:['Dedication','Analysis','Compassion'],quote:'"I attribute my success to this: I never gave or took any excuse."',dims:{A:85,B:88,C:90,D:82,E:85,F:85,G:72}},
+  {name:'Eleanor Roosevelt',era:'20th-Century America · First Lady',g:'f',tags:['Courage','Empathy','Dignity'],quote:'"No one can make you feel inferior without your consent."',dims:{A:78,B:88,C:92,D:82,E:78,F:82,G:85}},
+  {name:'Simone Weil',era:'20th-Century France · Mystic',g:'f',tags:['Depth','Sacrifice','Truth'],quote:'"Attention is the rarest and purest form of generosity."',dims:{A:85,B:78,C:82,D:92,E:65,F:99,G:55}},
+  {name:'Hannah Arendt',era:'20th Century · Political Philosopher',g:'f',tags:['Analysis','Courage','Depth'],quote:'"The most radical revolutionary will become a conservative the day after the revolution."',dims:{A:88,B:65,C:82,D:82,E:72,F:98,G:65}},
+  {name:'Mary Wollstonecraft',era:'18th-century England · Philosopher',g:'f',tags:['Justice','Courage','Independence'],quote:'"I do not wish women to have power over men; but over themselves."',dims:{A:82,B:70,C:85,D:78,E:78,F:90,G:65}},
+  {name:'Hypatia',era:'Late Antiquity · Mathematician',g:'f',tags:['Reason','Courage','Teaching'],quote:'"Reserve your right to think, for even to think wrongly is better than not to think at all."',dims:{A:95,B:72,C:85,D:85,E:78,F:96,G:70}},
+  {name:'Isabella I of Castile',era:'15th-century Spain · Queen',g:'f',tags:['Determination','Vision','Piety'],quote:'"Each person must govern their own life."',dims:{A:72,B:65,C:90,D:75,E:95,F:78,G:72}},
+  {name:'Catherine the Great',era:'18th-century Russia · Empress',g:'f',tags:['Intellect','Ambition','Strategy'],quote:'"I shall be an autocrat, that\'s my trade."',dims:{A:85,B:68,C:90,D:72,E:98,F:88,G:75}},
+  {name:'Hildegard of Bingen',era:'Medieval Germany · Mystic',g:'f',tags:['Vision','Creativity','Spirituality'],quote:'"We cannot live in a world interpreted for us by others."',dims:{A:90,B:70,C:82,D:88,E:72,F:96,G:70}},
+  {name:'Mary Shelley',era:'Romantic England · Writer',g:'f',tags:['Imagination','Depth','Courage'],quote:'"Beware; for I am fearless, and therefore powerful."',dims:{A:88,B:65,C:75,D:80,E:75,F:96,G:60}},
+  {name:'Jane Austen',era:'Regency England · Novelist',g:'f',tags:['Wit','Observation','Precision'],quote:'"I declare after all there is no enjoyment like reading!"',dims:{A:88,B:80,C:78,D:82,E:68,F:92,G:82}},
+  {name:'Emmeline Pankhurst',era:'Victorian/Edwardian England · Suffragist',g:'f',tags:['Conviction','Action','Leadership'],quote:'"We are here, not because we are law-breakers; we are here in our efforts to become law-makers."',dims:{A:72,B:82,C:92,D:75,E:88,F:78,G:68}},
+  {name:'Rosa Luxemburg',era:'Early 20th Century · Revolutionary',g:'f',tags:['Passion','Justice','Depth'],quote:'"Those who do not move, do not notice their chains."',dims:{A:82,B:80,C:85,D:72,E:85,F:92,G:58}},
+  {name:'Frida Kahlo',era:'20th-Century Mexico · Artist',g:'f',tags:['Authenticity','Pain','Intensity'],quote:'"I paint self-portraits because I am so often alone."',dims:{A:80,B:68,C:80,D:85,E:75,F:98,G:55}},
+  {name:'Georgia O\'Keeffe',era:'20th-Century America · Artist',g:'f',tags:['Vision','Independence','Presence'],quote:'"I found I could say things with color and shapes that I couldn\'t say any other way."',dims:{A:85,B:60,C:85,D:90,E:75,F:95,G:78}},
+  {name:'Amelia Earhart',era:'20th-Century America · Aviator',g:'f',tags:['Courage','Adventure','Calm'],quote:'"The most effective way to do it, is to do it."',dims:{A:82,B:68,C:90,D:85,E:90,F:72,G:85}},
+  {name:'Wangari Maathai',era:'20th-century Kenya · Environmentalist',g:'f',tags:['Resilience','Service','Connection'],quote:'"It\'s the little things citizens do. That\'s what will make the difference."',dims:{A:72,B:90,C:92,D:82,E:78,F:78,G:85}},
+  {name:'Coco Chanel',era:'20th-Century France · Designer',g:'f',tags:['Independence','Reinvention','Elegance'],quote:'"The most courageous act is still to think for yourself. Aloud."',dims:{A:80,B:65,C:88,D:78,E:92,F:82,G:82}},
+  {name:'Indira Gandhi',era:'Post-Colonial India · Prime Minister',g:'f',tags:['Determination','Strategy','Resilience'],quote:'"You cannot shake hands with a clenched fist."',dims:{A:72,B:68,C:90,D:75,E:95,F:78,G:72}},
+  {name:'Boudicca',era:'1st-century Britain · Warrior Queen',g:'f',tags:['Defiance','Passion','Justice'],quote:'"I am not fighting for my kingdom or wealth. I am fighting as an ordinary person for my lost freedom."',dims:{A:65,B:80,C:95,D:72,E:90,F:70,G:65}},
+  {name:'Sojourner Truth',era:'19th-century America · Abolitionist',g:'f',tags:['Truth','Courage','Justice'],quote:'"Ain\'t I a woman?"',dims:{A:68,B:85,C:95,D:80,E:80,F:78,G:80}},
+  {name:'Sei Shōnagon',era:'Heian Japan · Court Writer',g:'f',tags:['Observation','Wit','Sensitivity'],quote:'"I am the sort of person who approves of what others find disagreeable."',dims:{A:88,B:72,C:68,D:88,E:62,F:92,G:80}},
+  {name:'Sophie Germain',era:'Revolutionary France · Mathematician',g:'f',tags:['Persistence','Logic','Courage'],quote:'"Algebra is but written geometry; geometry is but figured algebra."',dims:{A:95,B:50,C:88,D:82,E:80,F:95,G:65}},
+  {name:'Theodora',era:'Byzantine Empire · Empress',g:'f',tags:['Resilience','Power','Strategy'],quote:'"Royalty is a good burial shroud."',dims:{A:72,B:68,C:95,D:72,E:97,F:78,G:72}},
+  {name:'Lise Meitner',era:'20th-Century Physics · Scientist',g:'f',tags:['Precision','Resilience','Depth'],quote:'"Science makes people reach selflessly for truth and objectivity."',dims:{A:97,B:55,C:90,D:85,E:80,F:95,G:65}},
+];
+
+const QUESTIONS = [
+  {section:'Situational Judgment',text:'You\'re tasked with flood control. Heavy rain arrives in 3 days and funds only cover one section of levee. What do you do first?',opts:[{l:'A',t:'Reinforce the main dam — protect the whole system',dims:{C:2,E:2,F:1}},{l:'B',t:'Protect the villages first — minimise casualties',dims:{B:2,C:1,D:1}},{l:'C',t:'Start all three sections — stabilise public confidence',dims:{B:1,G:2,E:1}},{l:'D',t:'Survey the water system first — then decide the sequence',dims:{A:2,F:2,D:1}}]},
+  {section:'Situational Judgment',text:'Your team is split on an important decision. The deadline is tomorrow. What do you do?',opts:[{l:'A',t:'Make the call yourself and take responsibility',dims:{E:2,C:1,G:1}},{l:'B',t:'Facilitate one more round of discussion to find consensus',dims:{B:2,D:1,G:1}},{l:'C',t:'Escalate to leadership — this needs a higher call',dims:{C:1,G:2,F:1}},{l:'D',t:'Research precedent cases before deciding',dims:{A:2,F:2,D:1}}]},
+  {section:'Situational Judgment',text:'You discover a close colleague has been taking credit for your work. How do you respond?',opts:[{l:'A',t:'Confront them directly and honestly',dims:{C:2,E:1,F:1}},{l:'B',t:'Address it privately to preserve the relationship',dims:{B:2,G:2,D:1}},{l:'C',t:'Document the pattern and escalate through channels',dims:{F:2,A:1,E:1}},{l:'D',t:'Step back and question whether it matters that much',dims:{G:2,D:2,C:1}}]},
+  {section:'Situational Judgment',text:'You\'ve been offered a prestigious role in another city. You\'d have to leave your close network behind. What matters most?',opts:[{l:'A',t:'The growth opportunity — I can rebuild connection anywhere',dims:{E:2,A:1,G:1}},{l:'B',t:'My existing relationships — they\'re irreplaceable',dims:{B:2,D:2,G:1}},{l:'C',t:'Whether the new role aligns with my long-term vision',dims:{F:2,A:1,E:1}},{l:'D',t:'A sense of security and stability',dims:{C:2,G:2,B:1}}]},
+  {section:'Pressure & Resilience',text:'Your most important project has just failed publicly. What\'s your instinct in the first 24 hours?',opts:[{l:'A',t:'Analyse what went wrong and build a recovery plan',dims:{A:2,F:2,E:1}},{l:'B',t:'Reach out to those affected and maintain trust',dims:{B:2,C:1,D:1}},{l:'C',t:'Take some space before responding to anything',dims:{G:2,D:2,C:1}},{l:'D',t:'Publicly own the failure and pivot quickly',dims:{C:2,E:2,G:1}}]},
+  {section:'Pressure & Resilience',text:'You\'re given an impossible deadline for a complex project. What do you do?',opts:[{l:'A',t:'Work backwards and triage ruthlessly',dims:{E:2,F:1,C:1}},{l:'B',t:'Negotiate scope with stakeholders',dims:{B:1,G:2,D:1}},{l:'C',t:'Pull in help even if it\'s uncomfortable to ask',dims:{B:2,C:1,G:1}},{l:'D',t:'Start and adjust as you learn more',dims:{E:1,A:1,C:2}}]},
+  {section:'Values & Ethics',text:'You have evidence that a respected institution is acting unethically. What do you do?',opts:[{l:'A',t:'Speak out publicly — the truth matters more than comfort',dims:{C:2,E:2,F:1}},{l:'B',t:'Work through internal channels first',dims:{B:1,G:2,F:1}},{l:'C',t:'Consult widely before taking action',dims:{B:2,A:1,D:1}},{l:'D',t:'Document everything, then decide when the time is right',dims:{F:2,A:2,C:1}}]},
+  {section:'Values & Ethics',text:'Someone you care about is making a decision you believe is deeply wrong. What do you do?',opts:[{l:'A',t:'Tell them directly, even if it hurts',dims:{C:1,E:1,F:2}},{l:'B',t:'Find the right moment to share your concern gently',dims:{B:2,G:2,D:1}},{l:'C',t:'Ask questions that might help them see it themselves',dims:{A:2,F:1,D:2}},{l:'D',t:'Respect their autonomy and stay available',dims:{G:2,B:1,D:2}}]},
+  {section:'Thinking Style',text:'When approaching a new problem, what is your default mode?',opts:[{l:'A',t:'Map the whole system before touching any part',dims:{A:2,F:2,D:1}},{l:'B',t:'Talk it through with others to sharpen my thinking',dims:{B:2,G:1,D:1}},{l:'C',t:'Start acting and learn as I go',dims:{E:2,C:1,G:1}},{l:'D',t:'Find one insight that unlocks the rest',dims:{A:1,F:2,E:1}}]},
+  {section:'Thinking Style',text:'You have a free afternoon with no obligations. What do you gravitate toward?',opts:[{l:'A',t:'Reading or researching something that\'s been nagging at me',dims:{A:2,F:2,D:1}},{l:'B',t:'Time with someone meaningful',dims:{B:2,D:2,G:1}},{l:'C',t:'Something active — moving, building, doing',dims:{E:1,C:1,G:2}},{l:'D',t:'Doing nothing in particular — just being',dims:{D:2,G:2,B:1}}]},
+  {section:'Thinking Style',text:'A complex argument is presented to you. What\'s your natural response?',opts:[{l:'A',t:'Look for the premise that could be wrong',dims:{A:2,F:2,C:1}},{l:'B',t:'Try to feel whether it\'s true',dims:{D:2,B:1,G:1}},{l:'C',t:'Test it against specific examples',dims:{A:1,F:1,E:1,C:1}},{l:'D',t:'Consider the motivations of whoever made it',dims:{B:1,F:2,A:1}}]},
+  {section:'Relationships',text:'In conflict with someone you depend on, what is your natural tendency?',opts:[{l:'A',t:'Prioritise resolution over being right',dims:{B:2,G:2,D:1}},{l:'B',t:'Name the problem clearly even if it\'s uncomfortable',dims:{C:1,F:2,E:1}},{l:'C',t:'Take time to process before engaging',dims:{D:2,G:2,A:1}},{l:'D',t:'Understand their perspective fully first',dims:{B:2,D:1,A:1}}]},
+  {section:'Relationships',text:'What do you most want from a close relationship?',opts:[{l:'A',t:'Deep intellectual exchange',dims:{A:2,F:2,D:1}},{l:'B',t:'Warmth and feeling truly known',dims:{B:2,D:2,G:1}},{l:'C',t:'Shared ambition and growth',dims:{E:2,A:1,C:1}},{l:'D',t:'Stability and reliability',dims:{C:2,G:2,B:1}}]},
+  {section:'Relationships',text:'Someone asks for your honest opinion on their work. It\'s not very good. What do you say?',opts:[{l:'A',t:'Tell them honestly — they\'ll thank me later',dims:{F:2,E:1,C:1}},{l:'B',t:'Find the genuine positives first, then the gaps',dims:{B:2,G:1,D:1}},{l:'C',t:'Ask what they want from me: validation or critique?',dims:{A:2,F:1,B:1}},{l:'D',t:'Be diplomatic — there\'s always something true to praise',dims:{G:2,B:1,D:2}}]},
+  {section:'Self & Identity',text:'What word best captures how others see you at your best?',opts:[{l:'A',t:'Incisive',dims:{F:2,A:2,E:1}},{l:'B',t:'Warm',dims:{B:2,D:2,G:1}},{l:'C',t:'Steady',dims:{C:2,G:2,B:1}},{l:'D',t:'Driven',dims:{E:2,C:1,A:1}}]},
+  {section:'Self & Identity',text:'When you look back on your decisions, what is the most common cause of regret?',opts:[{l:'A',t:'Acting before I had enough information',dims:{A:2,F:2,D:1}},{l:'B',t:'Prioritising others\' comfort over my own truth',dims:{C:1,F:2,E:1}},{l:'C',t:'Missing the moment — hesitating too long',dims:{E:2,C:2,G:1}},{l:'D',t:'Not knowing what I actually wanted',dims:{D:2,A:1,G:1}}]},
+  {section:'Self & Identity',text:'What is the internal experience you most want to protect in daily life?',opts:[{l:'A',t:'The space to think without interruption',dims:{A:2,F:2,D:1}},{l:'B',t:'A sense of connection to those I love',dims:{B:2,D:2,G:1}},{l:'C',t:'Forward momentum — a sense of progress',dims:{E:2,C:1,A:1}},{l:'D',t:'Inner calm — not being shaken by external noise',dims:{G:2,D:2,C:1}}]},
+  {section:'Leadership & Influence',text:'You are leading a team through an uncertain period. What is your primary focus?',opts:[{l:'A',t:'Provide a clear and compelling vision of the destination',dims:{E:2,F:1,A:1}},{l:'B',t:'Ensure people feel heard and held',dims:{B:2,D:2,G:1}},{l:'C',t:'Keep the team stable and protect their capacity',dims:{C:2,G:2,B:1}},{l:'D',t:'Build a rigorous plan with clear milestones',dims:{F:2,A:1,E:1}}]},
+  {section:'Leadership & Influence',text:'How do you most naturally influence people?',opts:[{l:'A',t:'Through the quality of my reasoning',dims:{F:2,A:2,E:1}},{l:'B',t:'Through trust built over time',dims:{B:2,C:1,G:2}},{l:'C',t:'Through energy and decisiveness',dims:{E:2,C:1,G:1}},{l:'D',t:'Through presence and listening deeply',dims:{D:2,B:2,G:1}}]},
+  {section:'Leadership & Influence',text:'A member of your team is underperforming and doesn\'t seem to care. What do you do?',opts:[{l:'A',t:'Have a direct, honest conversation about consequences',dims:{E:1,C:2,F:1}},{l:'B',t:'Understand what\'s going on in their life first',dims:{B:2,D:2,A:1}},{l:'C',t:'Adjust their role to better fit their strengths',dims:{A:2,G:1,F:1}},{l:'D',t:'Set clear expectations and give them a defined window',dims:{E:2,F:1,C:1}}]},
+  {section:'Risk & Ambition',text:'You have a bold idea that could reshape your field. It\'s risky. What do you do?',opts:[{l:'A',t:'Move on it — the risk is worth the potential',dims:{E:2,C:2,G:1}},{l:'B',t:'Test quietly before committing',dims:{A:2,F:1,G:1}},{l:'C',t:'Find allies who believe in it as much as you do',dims:{B:2,E:1,D:1}},{l:'D',t:'Map all the failure modes before proceeding',dims:{F:2,A:2,C:1}}]},
+  {section:'Risk & Ambition',text:'What is your relationship to the gap between where you are and where you want to be?',opts:[{l:'A',t:'It motivates me — the gap is fuel',dims:{E:2,A:1,C:1}},{l:'B',t:'It unsettles me — I\'m most at ease in motion',dims:{E:1,C:2,F:1}},{l:'C',t:'I try to make peace with where I am',dims:{G:2,D:2,B:1}},{l:'D',t:'I examine the gap carefully before moving',dims:{F:2,A:2,D:1}}]},
+  {section:'Long-term Orientation',text:'You have to choose between two paths: one pays off in 2 years, one in 20. The 20-year path is riskier but more meaningful. Which do you choose?',opts:[{l:'A',t:'The 20-year path — the meaning is non-negotiable',dims:{F:2,E:2,A:1}},{l:'B',t:'The 2-year path — certainty enables freedom later',dims:{C:2,G:2,E:1}},{l:'C',t:'Find a way to pursue both in parallel',dims:{A:2,E:1,G:1}},{l:'D',t:'The one that aligns with who I want to become',dims:{F:2,D:2,A:1}}]},
+  {section:'Long-term Orientation',text:'What do you most want to be true of your life when you\'re 80?',opts:[{l:'A',t:'That I understood the world more deeply than most',dims:{A:2,F:2,D:1}},{l:'B',t:'That I loved well and was loved',dims:{B:2,D:2,G:1}},{l:'C',t:'That I changed something real',dims:{E:2,C:2,F:1}},{l:'D',t:'That I was at peace with myself',dims:{G:2,D:2,B:1}}]},
+];
+
+// ══════════════════════════════════════════
+// STATE
+// ══════════════════════════════════════════
+let state = {
+  pref: null,
+  answers: {},
+  current: 0,
+  scores: {A:0,B:0,C:0,D:0,E:0,F:0,G:0},
+};
+
+const DIM_META = {
+  A:{name:'Curiosity',     desc:'How you engage with the unknown and pursue understanding'},
+  B:{name:'Connection',    desc:'Your instinct to relate, empathise, and build bonds'},
+  C:{name:'Resilience',    desc:'Your capacity to hold ground under pressure'},
+  D:{name:'Presence',      desc:'Your attunement to the moment and inner stillness'},
+  E:{name:'Ambition',      desc:'Your drive to move, expand, and create change'},
+  F:{name:'Depth',         desc:'Your pull toward complexity, nuance, and what lies beneath'},
+  G:{name:'Ease',          desc:'Your relationship with acceptance, flow, and self-trust'},
+};
+
+// ══════════════════════════════════════════
+// NAVIGATION
+// ══════════════════════════════════════════
+function show(id){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  window.scrollTo(0,0);
+}
+
+// ══════════════════════════════════════════
+// STRIPE PAYMENT
+// ══════════════════════════════════════════
+let stripeInstance = null;
+let stripeElements = null;
+
+async function initStripePayment(){
+  const payBtn = document.getElementById('stripe-pay-btn');
+  const processingEl = document.getElementById('pay-processing');
+  const processingText = document.getElementById('pay-processing-text');
+  const form = document.getElementById('stripe-form');
+
+  payBtn.style.display = 'none';
+  processingEl.classList.add('active');
+  processingText.textContent = 'Initialising payment…';
+
+  try {
+    // Fetch publishable key from backend
+    const configRes = await fetch('/api/config');
+    const { publishableKey, error: configErr } = await configRes.json();
+    if (configErr || !publishableKey) throw new Error('Payment configuration unavailable.');
+
+    // Create payment intent
+    processingText.textContent = 'Connecting to payment provider…';
+    const piRes = await fetch('/api/create-payment', { method: 'POST' });
+    const { clientSecret, error: piErr } = await piRes.json();
+    if (piErr || !clientSecret) throw new Error(piErr || 'Failed to create payment session.');
+
+    // Init Stripe Elements
+    stripeInstance = Stripe(publishableKey);
+    stripeElements = stripeInstance.elements({
+      clientSecret,
+      appearance: {
+        theme: 'night',
+        variables: {
+          colorPrimary: '#7C6FFF',
+          colorBackground: '#12101C',
+          colorText: '#F0EEF8',
+          colorTextSecondary: '#A09CBF',
+          colorDanger: '#FF6B6B',
+          fontFamily: '"DM Mono", monospace',
+          borderRadius: '8px',
+          spacingUnit: '4px',
+        },
+        rules: {
+          '.Input': { border: '1px solid #2A2647', backgroundColor: '#12101C' },
+          '.Input:focus': { border: '1px solid #7C6FFF', boxShadow: '0 0 0 3px rgba(124,111,255,0.15)' },
+          '.Tab': { border: '1px solid #2A2647', backgroundColor: '#12101C' },
+          '.Tab--selected': { border: '1px solid #7C6FFF', backgroundColor: 'rgba(124,111,255,0.07)' },
+        }
+      }
+    });
+
+    const paymentElement = stripeElements.create('payment', { layout: 'tabs' });
+
+    processingEl.classList.remove('active');
+    form.style.display = 'block';
+    paymentElement.mount('#stripe-payment-element');
+
+  } catch(err) {
+    processingEl.classList.remove('active');
+    payBtn.style.display = 'flex';
+    document.getElementById('stripe-err').textContent = err.message || 'Something went wrong. Please try again.';
+    form.style.display = 'block';
+    form.querySelector('#stripe-payment-element').innerHTML = '';
+    form.querySelector('#stripe-submit-btn').style.display = 'none';
+  }
+}
+
+async function submitStripePayment(){
+  const submitBtn = document.getElementById('stripe-submit-btn');
+  const errEl = document.getElementById('stripe-err');
+  const processingEl = document.getElementById('pay-processing');
+  const processingText = document.getElementById('pay-processing-text');
+  const form = document.getElementById('stripe-form');
+
+  submitBtn.disabled = true;
+  errEl.textContent = '';
+
+  const { error, paymentIntent } = await stripeInstance.confirmPayment({
+    elements: stripeElements,
+    redirect: 'if_required',
+  });
+
+  if (error) {
+    submitBtn.disabled = false;
+    errEl.textContent = error.message;
+    return;
+  }
+
+  // Payment succeeded — get key from backend
+  form.style.display = 'none';
+  processingEl.classList.add('active');
+  processingText.textContent = 'Payment confirmed — generating your key…';
+
+  try {
+    const keyRes = await fetch('/api/confirm-payment', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ paymentIntentId: paymentIntent.id }),
+    });
+    const { key, error: keyErr } = await keyRes.json();
+    if (keyErr || !key) throw new Error(keyErr || 'Key generation failed.');
+
+    processingEl.classList.remove('active');
+    onPaymentSuccess(key);
+  } catch(err) {
+    processingEl.classList.remove('active');
+    form.style.display = 'block';
+    submitBtn.disabled = false;
+    errEl.textContent = err.message;
+  }
+}
+
+function onPaymentSuccess(key){
+  const keyReveal = document.getElementById('key-reveal');
+  const keyInput = document.getElementById('key-input');
+  document.getElementById('pay-divider').style.display = 'none';
+  document.getElementById('key-reveal-code').textContent = key;
+  keyReveal.classList.add('active');
+  keyInput.value = key;
+  // Auto-proceed after user has a moment to see the key
+  setTimeout(() => verifyKey(), 2200);
+}
+
+function copyKey(){
+  const code = document.getElementById('key-reveal-code').textContent;
+  navigator.clipboard.writeText(code).then(()=>{
+    const btn = document.querySelector('.key-reveal-copy');
+    btn.textContent = 'Copied!';
+    setTimeout(()=>btn.textContent='Copy', 2000);
+  });
+}
+
+// ══════════════════════════════════════════
+// KEY VERIFICATION (server-side)
+// ══════════════════════════════════════════
+async function verifyKey(){
+  const val = document.getElementById('key-input').value;
+  const err = document.getElementById('key-err');
+  const btn = document.getElementById('key-verify-btn');
+
+  if(!val.trim()){ err.style.display='flex'; err.textContent='Please enter an access key.'; return; }
+
+  btn.disabled = true;
+  btn.textContent = 'Checking…';
+
+  try {
+    const res = await fetch('/api/verify-key', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({key: val}),
+    });
+    const { valid, reason } = await res.json();
+
+    if(valid){
+      err.style.display = 'none';
+      show('screen-pref');
+    } else {
+      err.style.display = 'flex';
+      err.textContent = reason === 'used'
+        ? 'This key has already been used.'
+        : 'Invalid key. Please check and try again.';
+    }
+  } catch(e){
+    err.style.display = 'flex';
+    err.textContent = 'Connection error. Please try again.';
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Enter →';
+  }
+}
+
+document.getElementById('key-input').addEventListener('keydown', e=>{
+  if(e.key==='Enter') verifyKey();
+});
+
+document.getElementById('key-input').addEventListener('input', e=>{
+  let v = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g,'');
+  if(v.length>2) v = v.slice(0,2)+'-'+v.slice(2);
+  if(v.length>7) v = v.slice(0,7)+'-'+v.slice(7);
+  if(v.length>12) v = v.slice(0,12);
+  if(e.target.value !== v) e.target.value = v;
+});
+
+// ══════════════════════════════════════════
+// PREFERENCE
+// ══════════════════════════════════════════
+let selectedPref = null;
+function selectPref(val, el){
+  selectedPref = val;
+  document.querySelectorAll('.pref-opt').forEach(o=>o.classList.remove('selected'));
+  el.classList.add('selected');
+  document.getElementById('pref-btn').disabled = false;
+}
+function startQuestions(){
+  state.pref = selectedPref;
+  state.answers = {};
+  state.current = 0;
+  show('screen-q');
+  renderQuestion();
+}
+
+// ══════════════════════════════════════════
+// QUESTIONS
+// ══════════════════════════════════════════
+function renderQuestion(){
+  const q = QUESTIONS[state.current];
+  const total = QUESTIONS.length;
+  const pct = (state.current/total)*100;
+  document.getElementById('q-progress').style.width = pct+'%';
+  document.getElementById('q-count-label').textContent = (state.current+1)+' / '+total;
+  document.getElementById('q-section-label').textContent = q.section+' · Question '+(state.current+1)+' of '+total;
+  document.getElementById('q-text').textContent = q.text;
+  document.getElementById('q-back').style.visibility = state.current===0?'hidden':'visible';
+
+  const container = document.getElementById('q-choices');
+  container.innerHTML='';
+  q.opts.forEach((opt,i)=>{
+    const btn = document.createElement('div');
+    btn.className = 'q-choice'+(state.answers[state.current]===i?' selected':'');
+    btn.innerHTML = `<span class="choice-letter">${opt.l}.</span><span>${opt.t}</span>`;
+    btn.onclick = ()=>selectAnswer(i, btn);
+    container.appendChild(btn);
+  });
+}
+
+function selectAnswer(idx, el){
+  state.answers[state.current] = idx;
+  document.querySelectorAll('.q-choice').forEach(c=>c.classList.remove('selected'));
+  el.classList.add('selected','flash');
+  setTimeout(()=>el.classList.remove('flash'), 200);
+  setTimeout(()=>{
+    if(state.current < QUESTIONS.length-1){
+      state.current++;
+      renderQuestion();
+    } else {
+      computeAndLoad();
+    }
+  }, 320);
+}
+
+function qBack(){
+  if(state.current>0){ state.current--; renderQuestion(); }
+}
+
+// ══════════════════════════════════════════
+// SCORING
+// ══════════════════════════════════════════
+function computeScores(){
+  if(state._scoresFromUrl) return state.scores;
+  const raw={A:0,B:0,C:0,D:0,E:0,F:0,G:0};
+  QUESTIONS.forEach((q,qi)=>{
+    const ans = state.answers[qi];
+    if(ans===undefined) return;
+    const dimMap = q.opts[ans].dims;
+    Object.entries(dimMap).forEach(([d,v])=>{ raw[d]+=v; });
+  });
+  const counts={A:0,B:0,C:0,D:0,E:0,F:0,G:0};
+  QUESTIONS.forEach(q=>{
+    const seen=new Set();
+    q.opts.forEach(o=>Object.keys(o.dims).forEach(d=>{if(!seen.has(d)){seen.add(d);counts[d]++;}}));
+  });
+  const pct={};
+  Object.keys(raw).forEach(d=>{
+    const mx = counts[d]*2;
+    pct[d] = mx>0 ? Math.min(100,Math.round((raw[d]/mx)*100)) : 50;
+  });
+  return pct;
+}
+
+// ══════════════════════════════════════════
+// FIGURE MATCHING
+// ══════════════════════════════════════════
+function matchFigure(scores, pref){
+  let pool = FIGURES;
+  if(pref==='male') pool = FIGURES.filter(f=>f.g==='m');
+  else if(pref==='female') pool = FIGURES.filter(f=>f.g==='f');
+
+  const dims=['A','B','C','D','E','F','G'];
+  function sim(a,b){
+    let dot=0,magA=0,magB=0;
+    dims.forEach(d=>{ dot+=a[d]*b[d]; magA+=a[d]**2; magB+=b[d]**2; });
+    return dot/(Math.sqrt(magA)*Math.sqrt(magB));
+  }
+
+  let best=null, bestScore=-1;
+  pool.forEach(fig=>{
+    const s=sim(scores, fig.dims);
+    if(s>bestScore){ bestScore=s; best=fig; }
+  });
+  return {figure:best, similarity:Math.round(bestScore*100)};
+}
+
+// ══════════════════════════════════════════
+// LOADING → RESULTS
+// ══════════════════════════════════════════
+function computeAndLoad(){
+  show('screen-loading');
+  const steps=[
+    'Analysing response patterns…',
+    'Mapping dimensional scores…',
+    'Cross-referencing historical figures…',
+    'Identifying your closest archetype…',
+    'Composing your personal report…',
+  ];
+  let step=0;
+  const bar = document.getElementById('loading-bar');
+  const stepEl = document.getElementById('loading-step');
+  const iv = setInterval(()=>{
+    step++;
+    bar.style.width = (step/steps.length*100)+'%';
+    stepEl.textContent = steps[Math.min(step,steps.length-1)];
+    if(step>=steps.length){ clearInterval(iv); setTimeout(showResults,500); }
+  }, 600);
+}
+
+function showResults(){
+  const scores = computeScores();
+  state.scores = scores;
+  const {figure, similarity} = matchFigure(scores, state.pref);
+
+  const now = new Date();
+  document.getElementById('res-date').textContent =
+    (now.getMonth()+1).toString().padStart(2,'0')+'/'+now.getDate().toString().padStart(2,'0');
+  document.getElementById('res-report-id').textContent =
+    'PERSONA REPORT #'+String(now.getMonth()+1).padStart(2,'0')+'-'+now.getDate().toString().padStart(2,'0');
+
+  document.getElementById('res-name').textContent = figure.name;
+  document.getElementById('res-era').textContent = figure.era;
+  document.getElementById('res-quote').textContent = figure.quote;
+  document.getElementById('res-tags').innerHTML = figure.tags.map(t=>`<span class="hero-tag">${t}</span>`).join('');
+
+  const sorted = Object.entries(scores).sort((a,b)=>a[1]-b[1]);
+  const lowest = sorted[0][0];
+  const highest = sorted[sorted.length-1][0];
+
+  document.getElementById('res-kpis').innerHTML = `
+    <div class="kpi-card"><div class="kpi-label">Dominant Type</div><div class="kpi-value">${DIM_META[highest].name}-led</div><div class="kpi-desc">Your most stable behavioural style right now</div></div>
+    <div class="kpi-card"><div class="kpi-label">Similarity Index</div><div class="kpi-value">${similarity}%</div><div class="kpi-desc">Match with this figure's profile</div></div>
+    <div class="kpi-card"><div class="kpi-label">Result Basis</div><div class="kpi-value">This session</div><div class="kpi-desc">Influenced by current state — treat as reference</div></div>
+    <div class="kpi-card"><div class="kpi-label">Priority to build</div><div class="kpi-value">${DIM_META[lowest].name}</div><div class="kpi-desc">Where you'll gain the fastest overall lift</div></div>
+  `;
+
+  const sectionsEl = document.getElementById('res-sections');
+  sectionsEl.innerHTML = '';
+  buildSections(scores, figure, highest, lowest).forEach((sec,i)=>{
+    sectionsEl.innerHTML += `<hr class="section-divider">
+    <div class="section-block" id="sec-${i}">
+      <div class="section-header"><div class="section-num">${i+1}</div><h3 class="section-title">${sec.title}</h3></div>
+      <div class="section-body">${sec.content}</div>
+    </div>`;
+  });
+
+  show('screen-results');
+  setTimeout(()=>renderRadar(scores), 200);
+}
+
+function buildSections(scores, figure, highest, lowest){
+  const hName = DIM_META[highest].name;
+  const lName = DIM_META[lowest].name;
+
+  const portraits={A:`You orient toward the world primarily through curiosity. You don't just tolerate complexity — you seek it. The people who matter most to you are those who show you something you hadn't seen before. Your risk is mistaking the map for the territory: you can understand something deeply without ever committing to it.`,B:`Your centre of gravity is relational. You feel most alive when you're genuinely connected, and you have an unusual capacity to make people feel seen. The shadow side is that you can overweight harmony — staying available for others at the cost of your own direction.`,C:`Resilience is the most stable thing about you. Under pressure, your baseline stays calmer than most. You've built a deep operating trust in your own capacity to absorb and continue. The risk is treating resilience as identity — enduring things that should instead be changed.`,D:`Presence is your native register. You notice things others miss because you're actually there. This quality is rare. The challenge: presence without direction can become inertia. The same capacity that makes you grounded can keep you static.`,E:`Ambition animates you at a deep level. You experience the gap between where you are and what you're capable of as a pull, not a torment. You're oriented toward the future. The risk: you can outrun your own integration — moving so fast that nothing consolidates.`,F:`You think in layers. Surface explanations don't satisfy you, and you have little patience for people who stop at the obvious. This gives you rare analytical power. The cost: depth without execution stays private. Insight that doesn't act is just furniture.`,G:`There's a quiet groundedness to you that's hard to manufacture. You don't perform ease — you've actually found some. People around you settle. The risk is that ease, at its worst, becomes avoidance. The difference between peace and passivity is one you know intimately.`};
+
+  const realWorld={A:`You're at your best when problems have no obvious answer. You tend to ask the question behind the question, and colleagues experience you as someone who reveals what everyone else missed. The flip side: you can over-complicate what needs to be simple.`,B:`In high-pressure situations, you're the person who doesn't let the relationship break. You stay warm when others get cold. You're less likely to humiliate and more likely to find the third path nobody else was looking for.`,C:`You can hold ground under pressure longer than almost anyone around you. People see you as consistent and dependable. The cost: your stability can be mistaken for agreement.`,D:`You have an unusual capacity to be with someone fully. In conversations, people feel less alone with you than with others. The risk: your attunement can make you absorb others' states.`,E:`You move fast. You see what's possible before others do, and you act on it. The people around you find you energising and occasionally exhausting. The risk: you make decisions at a pace that leaves people behind.`,F:`In conversation, you go deep or not at all. You're the person who brings the uncomfortable insight that turns out to be the most important thing said. The risk: you can become so committed to being right that you stop being useful.`,G:`There's a settling quality to how you show up. In tense situations, you calibrate down rather than up. The risk: your ease can look like disengagement.`};
+
+  const currentStates={A:`You're in a phase of accumulation. You're taking in more than you're producing, and that's not a problem — it's preparation. But at some point, the map has to become territory.`,B:`You're operating from a relationship-first mode. Your instinct is to maintain and protect connections. The risk right now is that you're absorbing other people's emotional weather without enough shelter of your own.`,C:`You're in a holding pattern that looks like stability but may be load-bearing. Track whether you're absorbing things that should be set down.`,D:`You're present, but the question is: present to what? The most useful thing right now might not be to go deeper, but to choose more consciously what you're present for.`,E:`You're in a growth phase and you're moving fast. Integration happens in pauses. The most useful constraint right now might be one you choose, not one imposed on you.`,F:`You're in a depth-seeking mode, which is your natural home. But depth can become a form of avoidance. Notice whether your thinking is pointing toward a decision or circling away from one.`,G:`You've found a level of inner peace that most people spend years trying to reach. Ease is most powerful when it's paired with clear direction.`};
+
+  const risks={A:`The challenge isn't your intelligence — it's the gap between understanding and commitment. You can see every side of a question so clearly that deciding feels like a loss.`,B:`The risk isn't that you care too much. It's that caring can become a role you play at the cost of your own position.`,C:`The risk isn't your resilience — it's that resilience can become a justification for staying in situations that should be exited.`,D:`The risk is that presence becomes its own kind of avoidance. Being fully here is only useful if "here" is worth being present to.`,E:`The risk is pace without integration. Ambition at its best is generative. At its worst, it's flight.`,F:`The risk is intelligence in service of resistance. When depth becomes the reason to delay, precision becomes the enemy of progress.`,G:`The risk is that ease becomes a form of non-participation. The most sophisticated version of avoidance is peace.`};
+
+  const actionPlans={A:{d1:'Today: name one question you\'ve been studying without acting on. Commit to a decision or a deadline — not more research.',d2:'Map the gap between what you understand and what you\'ve built. For each insight, ask: "What does this require me to do?"',d3:'Tell one person something you\'ve concluded. The act of stating it outside your own head forces a level of commitment that thinking doesn\'t.',goal:`Around '${lName}': run three consecutive days of the above and write one sentence of conclusion on day 3.`},B:{d1:'Today: say no to one request that you would usually absorb out of availability. Notice what it costs you and what it doesn\'t.',d2:'In one important relationship, name something you need — not what the other person needs.',d3:'Audit the last week: count how many times you managed another person\'s discomfort rather than your own boundary.',goal:`Around '${lName}': practise one boundary per day for three days and note what changes.`},C:{d1:'Today: identify one thing you\'ve been enduring that might instead need to be addressed. Don\'t fix it — just name it.',d2:'Tell one person something you\'ve been absorbing silently. The goal isn\'t resolution — it\'s visibility.',d3:'Review the week: distinguish which pressures are genuinely yours to carry and which belong elsewhere.',goal:`Around '${lName}': do one act of honest handoff — return something that isn\'t yours to hold.`},D:{d1:'Today: choose one thing you want and act on it before you fully understand why. Presence plus direction, not just presence.',d2:'Identify the place in your life where you\'re most present but least purposeful.',d3:'Commit to one choice you\'ve been deferring.',goal:`Around '${lName}': practise one intentional choice per day. On day 3, write what shifted.`},E:{d1:'Today: choose one forward motion to slow down. Not stop — slow. Notice what becomes visible when you reduce pace.',d2:'Identify one thing you\'ve been running past. Give it thirty minutes of actual attention.',d3:'Map the last three fast decisions. For each, ask: what did I know, and what did I assume?',goal:`Around '${lName}': integrate one insight per day rather than acquiring a new one.`},F:{d1:'Today: take one thing you understand well and do something with it. Any output counts.',d2:'In one conversation, share a conclusion rather than an analysis. "I think X" not "On the one hand…"',d3:'Identify the decision you\'ve been thinking around instead of toward. Name the next step, however small.',goal:`Around '${lName}': one output per day for three days. Day 3: write what shifted when you acted on what you already knew.`},G:{d1:'Today: identify one place where acceptance is costing you. Not to fight it — just to see it clearly.',d2:'Name one thing you want that ease has made it comfortable not to pursue. Write it down.',d3:'Do one thing that creates productive friction. Something that matters enough to disturb your calm.',goal:`Around '${lName}': for three days, notice where ease is peace and where it\'s avoidance.`}};
+
+  const ap = actionPlans[lowest];
+  const dimCards = ['A','B','C','D','E','F','G'].map(d=>`<div class="dim-card"><div class="dim-card-top"><span class="dim-card-name">${DIM_META[d].name}</span><span class="dim-card-pct">${scores[d]}%</span></div><div class="dim-card-desc">${DIM_META[d].desc}</div>${d===lowest?'<div class="dim-card-flag">Your current most vulnerable point</div>':''}</div>`).join('');
+
+  return [
+    {title:'Character Portrait',content:`<p class="section-text">${portraits[highest]}</p><p class="section-text" style="margin-top:12px">Like ${figure.name}, you bring a particular quality of ${hName.toLowerCase()} to what you do — not as a performance, but as a structural feature of how you engage.</p>`},
+    {title:'Capability Structure',content:`<p style="font-size:13.5px;color:var(--text2);margin-bottom:12px;line-height:1.5">Seven-dimension profile. Higher scores indicate more reliable availability of that quality.</p><div class="radar-wrap"><canvas id="radar-chart" role="img" aria-label="Radar chart showing your seven-dimension profile"></canvas></div><div class="dim-cards-grid">${dimCards}</div>`},
+    {title:'Real-World Expression',content:`<p class="section-text">${realWorld[highest]}</p>`},
+    {title:'Current State',content:`<p class="section-text">${currentStates[highest]}</p><p class="section-text" style="margin-top:10px">${currentStates[lowest]}</p>`},
+    {title:'Risk Signal',content:`<p class="section-text">${risks[lowest]}</p>`},
+    {title:'Three-Day Action Plan',content:`<div class="section-text" style="margin-bottom:12px">3-day execution: complete one action per day, review on day 3.</div><div class="day-cards"><div class="day-card"><div class="day-label">Day 1</div><div class="day-text">${ap.d1}</div></div><div class="day-card"><div class="day-label">Day 2</div><div class="day-text">${ap.d2}</div></div><div class="day-card"><div class="day-label">Day 3</div><div class="day-text">${ap.d3}</div></div></div><div class="goal-box">This cycle's goal: ${ap.goal}</div>`},
+  ];
+}
+
+// ══════════════════════════════════════════
+// RADAR CHART
+// ══════════════════════════════════════════
+let radarChart = null;
+function renderRadar(scores){
+  if(radarChart){ radarChart.destroy(); radarChart=null; }
+  const canvas = document.getElementById('radar-chart');
+  if(!canvas) return;
+  const labels = Object.keys(DIM_META).map(k=>DIM_META[k].name);
+  const data = Object.keys(DIM_META).map(k=>scores[k]);
+  radarChart = new Chart(canvas, {
+    type:'radar',
+    data:{
+      labels,
+      datasets:[{data,backgroundColor:'rgba(124,111,255,0.12)',borderColor:'#7C6FFF',borderWidth:2,pointBackgroundColor:'#7C6FFF',pointBorderColor:'#1A1730',pointBorderWidth:1.5,pointRadius:4}]
+    },
+    options:{
+      responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false}},
+      scales:{r:{min:0,max:100,ticks:{stepSize:25,display:false},angleLines:{color:'rgba(42,38,71,0.8)'},grid:{color:'rgba(42,38,71,0.8)'},pointLabels:{color:'rgba(160,156,191,0.8)',font:{size:12,family:"'Inter',sans-serif"}}}}
+    }
+  });
+}
+
+// ══════════════════════════════════════════
+// UTILITIES
+// ══════════════════════════════════════════
+function copyLink(){
+  const encoded = btoa(JSON.stringify({s:state.scores,p:state.pref}));
+  const url = window.location.origin+'/?r='+encoded;
+  navigator.clipboard.writeText(url).then(()=>{
+    const btn = document.querySelector('.btn-copy');
+    const prev = btn.textContent;
+    btn.textContent = '✓ Copied!';
+    setTimeout(()=>btn.textContent=prev, 2000);
+  });
+}
+
+function retake(){
+  state = {pref:null,answers:{},current:0,scores:{A:0,B:0,C:0,D:0,E:0,F:0,G:0}};
+  selectedPref = null;
+  stripeInstance = null;
+  stripeElements = null;
+  document.querySelectorAll('.pref-opt').forEach(o=>o.classList.remove('selected'));
+  document.getElementById('pref-btn').disabled=true;
+  document.getElementById('key-input').value='';
+  document.getElementById('stripe-pay-btn').style.display='flex';
+  document.getElementById('stripe-form').style.display='none';
+  document.getElementById('stripe-err').textContent='';
+  document.getElementById('key-reveal').classList.remove('active');
+  document.getElementById('pay-divider').style.display='flex';
+  show('screen-key');
+}
+
+// ══════════════════════════════════════════
+// INTERACTION ANIMATIONS
+// ══════════════════════════════════════════
+
+// Inject .card-glow div into every .card for mouse-follow effect
+function initCardGlows() {
+  document.querySelectorAll('.card').forEach(card => {
+    if (card.querySelector('.card-glow')) return;
+    const glow = document.createElement('div');
+    glow.className = 'card-glow';
+    card.prepend(glow);
+
+    card.addEventListener('mousemove', e => {
+      const rect = card.getBoundingClientRect();
+      card.style.setProperty('--gx', (e.clientX - rect.left) + 'px');
+      card.style.setProperty('--gy', (e.clientY - rect.top) + 'px');
+    });
+  });
+}
+initCardGlows();
+
+// Re-run after results render (cards are injected dynamically)
+const _origShowResults = showResults;
+showResults = function() {
+  _origShowResults.apply(this, arguments);
+  setTimeout(initCardGlows, 300);
+};
+
+// Global click ripple
+document.addEventListener('click', e => {
+  // Ripple burst from cursor
+  const size = 130;
+  const ripple = document.createElement('div');
+  ripple.className = 'click-ripple';
+  ripple.style.cssText = `width:${size}px;height:${size}px;left:${e.clientX - size/2}px;top:${e.clientY - size/2}px`;
+  document.body.appendChild(ripple);
+  ripple.addEventListener('animationend', () => ripple.remove());
+
+  // Flash every visible tag dot
+  document.querySelectorAll('.screen.active .tag-dot').forEach(dot => {
+    dot.classList.remove('flash');
+    void dot.offsetWidth; // reflow to restart animation
+    dot.classList.add('flash');
+    dot.addEventListener('animationend', () => dot.classList.remove('flash'), { once: true });
+  });
+});
+
+// Handle shared URL — skip key/pref/questions, render results directly
+const urlParams = new URLSearchParams(window.location.search);
+const rParam = urlParams.get('r');
+if(rParam){
+  try{
+    const d = JSON.parse(atob(rParam));
+    if(d.s && d.p){
+      state.scores = d.s;
+      state.pref = d.p;
+      state._scoresFromUrl = true;
+      showResults();
+    }
+  }catch(e){ console.warn('Invalid shared URL param:', e); }
+}
+</script>
+</body>
+</html>
