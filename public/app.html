@@ -578,6 +578,7 @@ function show(id){
 // ══════════════════════════════════════════
 let stripeInstance = null;
 let stripeElements = null;
+let confirmedPaymentIntentId = null;
 
 async function initStripePayment(){
   const payBtn = document.getElementById('stripe-pay-btn');
@@ -658,9 +659,16 @@ async function submitStripePayment(){
   });
 
   if (error) {
-    submitBtn.disabled = false;
-    errEl.textContent = error.message;
-    return;
+    // If payment was already confirmed (e.g. backend failed on first attempt), retry key fetch
+    if (error.code === 'payment_intent_unexpected_state' && confirmedPaymentIntentId) {
+      // fall through to key fetch below
+    } else {
+      submitBtn.disabled = false;
+      errEl.textContent = error.message;
+      return;
+    }
+  } else {
+    confirmedPaymentIntentId = paymentIntent.id;
   }
 
   // Payment succeeded — get key from backend
@@ -672,7 +680,7 @@ async function submitStripePayment(){
     const keyRes = await fetch('/api/confirm-payment', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ paymentIntentId: paymentIntent.id }),
+      body: JSON.stringify({ paymentIntentId: confirmedPaymentIntentId }),
     });
     const { key, error: keyErr } = await keyRes.json();
     if (keyErr || !key) throw new Error(keyErr || 'Key generation failed.');
