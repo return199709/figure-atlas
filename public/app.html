@@ -655,6 +655,7 @@ async function submitStripePayment(){
 
   const { error, paymentIntent } = await stripeInstance.confirmPayment({
     elements: stripeElements,
+    confirmParams: { return_url: window.location.origin + '/' },
     redirect: 'if_required',
   });
 
